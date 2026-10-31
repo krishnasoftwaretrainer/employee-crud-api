@@ -173,9 +173,91 @@ const updateEmployee = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+// 5. UPDATE Employee (PATCH)
+const patchEmployee = async (req, res) => {
+    const { id } = req.params;
+    const { name, email, salary } = req.body;
 
+    // Validate employee ID
+    if (!validateId(id)) {
+        return res.status(400).json({
+            message: 'Invalid employee ID'
+        });
+    }
 
-// 5. DELETE Employee
+    // Check whether at least one field is provided
+    if (name === undefined && email === undefined && salary === undefined) {
+        return res.status(400).json({
+            message: 'Provide at least one field to update'
+        });
+    }
+
+    // Validate only the fields provided
+    if (name !== undefined &&
+        (typeof name !== 'string' || name.trim() === '')) {
+        return res.status(400).json({
+            message: 'Invalid name'
+        });
+    }
+
+    if (email !== undefined &&
+        (typeof email !== 'string' ||
+         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))) {
+        return res.status(400).json({
+            message: 'Please enter a valid email'
+        });
+    }
+
+    if (salary !== undefined &&
+        (!Number.isFinite(salary) || salary <= 0)) {
+        return res.status(400).json({
+            message: 'Salary must be a positive number'
+        });
+    }
+
+    // Build the SQL update dynamically
+    const fields = [];
+    const values = [];
+
+    if (name !== undefined) {
+        values.push(name.trim());
+        fields.push(`name = $${values.length}`);
+    }
+
+    if (email !== undefined) {
+        values.push(email.trim());
+        fields.push(`email = $${values.length}`);
+    }
+
+    if (salary !== undefined) {
+        values.push(salary);
+        fields.push(`salary = $${values.length}`);
+    }
+
+    values.push(id);
+
+    const query = `
+        UPDATE employees
+        SET ${fields.join(', ')}
+        WHERE id = $${values.length}
+        RETURNING *
+    `;
+
+    const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
+        return res.status(404).json({
+            message: 'Employee not found'
+        });
+    }
+
+    res.status(200).json({
+        message: 'Employee partially updated successfully',
+        employee: result.rows[0]
+    });
+};
+
+// 6. DELETE Employee
 const deleteEmployee = async (req, res) => {
     try {
         const { id } = req.params;
@@ -214,5 +296,6 @@ module.exports = {
     getEmployees,
     getEmployeeById,
     updateEmployee,
+    patchEmployee,
     deleteEmployee
 };
