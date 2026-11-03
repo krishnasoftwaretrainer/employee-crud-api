@@ -7,6 +7,9 @@ const app = express();
 // Middleware
 app.use(express.json());
 
+// Serve HTML, CSS and JavaScript
+app.use(express.static('public'));
+
 // Create Employee Table
 app.get('/create-table', async (req, res) => {
     try {

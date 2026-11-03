@@ -1,0 +1,106 @@
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f6f9;
+    padding: 30px;
+}
+
+h1 {
+    text-align: center;
+    color: #243b55;
+    margin-bottom: 30px;
+}
+
+.container {
+    background-color: white;
+    max-width: 1000px;
+    margin: 20px auto;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+h2 {
+    margin-bottom: 20px;
+    color: #243b55;
+}
+
+label {
+    display: block;
+    margin-top: 12px;
+    margin-bottom: 6px;
+    font-weight: bold;
+}
+
+input {
+    width: 100%;
+    padding: 11px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    font-size: 15px;
+}
+
+button {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 8px 5px 8px 0;
+    font-size: 14px;
+    color: white;
+    background-color: #2563eb;
+}
+
+button:hover {
+    opacity: 0.85;
+}
+
+#clearBtn {
+    background-color: #64748b;
+}
+
+#getBtn {
+    background-color: #16a34a;
+    margin-bottom: 15px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: left;
+}
+
+th {
+    background-color: #243b55;
+    color: white;
+}
+
+tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+.edit-btn {
+    background-color: #f59e0b;
+}
+
+.delete-btn {
+    background-color: #dc2626;
+}
+
+#message {
+    margin-top: 12px;
+    font-weight: bold;
+}
