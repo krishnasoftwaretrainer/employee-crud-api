@@ -91,7 +91,47 @@ const getEmployees = async (req, res) => {
 };
 
 
-// 3. GET Employee By ID
+// 2. GET All Employees (Query Parameters)
+const getEmployees = async (req, res) => {
+    try {
+        const { id, name } = req.query;
+
+        let query = "SELECT * FROM employees WHERE 1=1";
+        let values = [];
+        let count = 1;
+
+        if (id !== undefined) {
+            if (!validateId(id)) {
+                return res.status(400).json({
+                    message: 'Invalid employee ID'
+                });
+            }
+
+            query += ` AND id = $${count++}`;
+            values.push(id);
+        }
+
+        if (name !== undefined) {
+            query += ` AND name = $${count++}`;
+            values.push(name);
+        }
+
+        query += " ORDER BY id";
+
+        const result = await pool.query(query, values);
+
+        res.status(200).json({
+            message: 'Employees retrieved successfully',
+            employees: result.rows
+        });
+
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+
+// 3. GET Employee By ID (Path Parameters)
 const getEmployeeById = async (req, res) => {
     try {
         const { id } = req.params;
