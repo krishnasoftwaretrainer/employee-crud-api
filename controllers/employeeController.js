@@ -123,10 +123,14 @@ const getEmployees = async (req, res) => {
 };
 
 
-// 3. GET Employee By ID (Path Parameters)
+// 3. GET Employee By ID (Path + Query Parameters)
 const getEmployeeById = async (req, res) => {
     try {
+        // Path Parameter
         const { id } = req.params;
+
+        // Query Parameters
+        const { name, salary } = req.query;
 
         if (!validateId(id)) {
             return res.status(400).json({
@@ -134,10 +138,36 @@ const getEmployeeById = async (req, res) => {
             });
         }
 
-        const result = await pool.query(
-            'SELECT * FROM employees WHERE id = $1',
-            [id]
-        );
+        let query = 'SELECT * FROM employees WHERE id = $1';
+        let values = [id];
+        let count = 2;
+
+        // Match employee name
+        if (name !== undefined) {
+            if (typeof name !== 'string' || name.trim() === '') {
+                return res.status(400).json({
+                    message: 'Invalid employee name'
+                });
+            }
+
+            query += ` AND name = $${count++}`;
+            values.push(name.trim());
+        }
+
+        // Match employee salary
+        if (salary !== undefined) {
+            if (typeof salary !== 'string' || salary.trim() === '' ||
+                !Number.isFinite(Number(salary))) {
+                return res.status(400).json({
+                    message: 'Invalid employee salary'
+                });
+            }
+
+            query += ` AND salary = $${count++}`;
+            values.push(Number(salary));
+        }
+
+        const result = await pool.query(query, values);
 
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -154,7 +184,6 @@ const getEmployeeById = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
-
 
 // 4. UPDATE Employee (PUT)
 const updateEmployee = async (req, res) => {
