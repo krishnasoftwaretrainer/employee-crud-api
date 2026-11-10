@@ -72,25 +72,6 @@ const addEmployee = async (req, res) => {
     }
 };
 
-
-// 2. GET All Employees (GET)
-const getEmployees = async (req, res) => {
-    try {
-        const result = await pool.query(
-            'SELECT * FROM employees ORDER BY id'
-        );
-
-        res.status(200).json({
-            message: 'Employees retrieved successfully',
-            employees: result.rows
-        });
-
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-
-
 // 2. GET All Employees (Query Parameters)
 const getEmployees = async (req, res) => {
     try {
