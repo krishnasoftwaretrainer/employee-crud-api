@@ -21,8 +21,9 @@ const validateEmployee = (name, email, salary) => {
         salary === undefined ||
         salary === null ||
         salary === '' ||
-        !Number.isFinite(salary) ||
-        salary <= 0
+        (typeof salary !== 'number' && typeof salary !== 'string') ||
+        !Number.isFinite(Number(salary)) ||
+        Number(salary) <= 0
     ) {
         return 'Salary must be a positive number';
     }
@@ -33,7 +34,10 @@ const validateEmployee = (name, email, salary) => {
 
 // Reusable ID Validation
 const validateId = (id) => {
-    return /^\d+$/.test(id) && Number.isSafeInteger(Number(id)) && Number(id) > 0;
+    return typeof id === 'string' &&
+        /^\d+$/.test(id) &&
+        Number.isSafeInteger(Number(id)) &&
+        Number(id) > 0;
 };
 
 
@@ -59,7 +63,7 @@ const addEmployee = async (req, res) => {
         const result = await pool.query(query, [
             name.trim(),
             email.trim(),
-            salary
+            Number(salary)
         ]);
 
         res.status(201).json({
@@ -71,6 +75,7 @@ const addEmployee = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
 
 // 2. GET All Employees (Query Parameters)
 const getEmployees = async (req, res) => {
@@ -93,8 +98,14 @@ const getEmployees = async (req, res) => {
         }
 
         if (name !== undefined) {
+            if (typeof name !== 'string' || name.trim() === '') {
+                return res.status(400).json({
+                    message: 'Invalid employee name'
+                });
+            }
+
             query += ` AND name = $${count++}`;
-            values.push(name);
+            values.push(name.trim());
         }
 
         query += " ORDER BY id";
@@ -175,7 +186,7 @@ const updateEmployee = async (req, res) => {
         const result = await pool.query(query, [
             name.trim(),
             email.trim(),
-            salary,
+            Number(salary),
             id
         ]);
 
@@ -194,89 +205,107 @@ const updateEmployee = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+
 // 5. UPDATE Employee (PATCH)
 const patchEmployee = async (req, res) => {
-    const { id } = req.params;
-    const { name, email, salary } = req.body;
+    try {
+        const { id } = req.params;
+        const { name, email, salary } = req.body;
 
-    // Validate employee ID
-    if (!validateId(id)) {
-        return res.status(400).json({
-            message: 'Invalid employee ID'
+        // Validate Employee ID
+        if (!validateId(id)) {
+            return res.status(400).json({
+                message: 'Invalid employee ID'
+            });
+        }
+
+        // Check whether at least one field is provided
+        if (
+            name === undefined &&
+            email === undefined &&
+            salary === undefined
+        ) {
+            return res.status(400).json({
+                message: 'Provide at least one field to update'
+            });
+        }
+
+        // Validate Name
+        if (name !== undefined &&
+            (typeof name !== 'string' || name.trim() === '')) {
+            return res.status(400).json({
+                message: 'Invalid name'
+            });
+        }
+
+        // Validate Email
+        if (email !== undefined &&
+            (typeof email !== 'string' ||
+            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))) {
+            return res.status(400).json({
+                message: 'Please enter a valid email'
+            });
+        }
+
+        // Validate Salary
+        if (salary !== undefined &&
+            (salary === null ||
+            salary === '' ||
+            (typeof salary !== 'number' && typeof salary !== 'string') ||
+            !Number.isFinite(Number(salary)) ||
+            Number(salary) <= 0)) {
+            return res.status(400).json({
+                message: 'Salary must be a positive number'
+            });
+        }
+
+        // Build SQL Update Dynamically
+        const fields = [];
+        const values = [];
+
+        if (name !== undefined) {
+            values.push(name.trim());
+            fields.push(`name = $${values.length}`);
+        }
+
+        if (email !== undefined) {
+            values.push(email.trim());
+            fields.push(`email = $${values.length}`);
+        }
+
+        if (salary !== undefined) {
+            values.push(Number(salary));
+            fields.push(`salary = $${values.length}`);
+        }
+
+        values.push(id);
+
+        const query = `
+            UPDATE employees
+            SET ${fields.join(', ')}
+            WHERE id = $${values.length}
+            RETURNING *
+        `;
+
+        const result = await pool.query(query, values);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                message: 'Employee not found'
+            });
+        }
+
+        res.status(200).json({
+            message: 'Employee partially updated successfully',
+            employee: result.rows[0]
         });
+
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
-
-    // Check whether at least one field is provided
-    if (name === undefined && email === undefined && salary === undefined) {
-        return res.status(400).json({
-            message: 'Provide at least one field to update'
-        });
-    }
-
-    // Validate only the fields provided
-    if (name !== undefined &&
-        (typeof name !== 'string' || name.trim() === '')) {
-        return res.status(400).json({
-            message: 'Invalid name'
-        });
-    }
-
-    if (email !== undefined &&
-        (typeof email !== 'string' ||
-         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))) {
-        return res.status(400).json({
-            message: 'Please enter a valid email'
-        });
-    }
-
-    if (salary !== undefined &&
-        (!Number.isFinite(salary) || salary <= 0)) {
-        return res.status(400).json({
-            message: 'Salary must be a positive number'
-        });
-    }
-
-    // Build the SQL update dynamically
-    const fields = [];
-    const values = [];
-
-    if (name !== undefined) {
-        values.push(name.trim());
-        fields.push(`name = $${values.length}`);
-    }
-
-    if (email !== undefined) {
-        values.push(email.trim());
-        fields.push(`email = $${values.length}`);
-    }
-
-    if (salary !== undefined) {
-        values.push(salary);
-        fields.push(`salary = $${values.length}`);
-    }
-
-    values.push(id);
-
-    const query = `
-        UPDATE employees
-        SET ${fields.join(', ')}
-        WHERE id = $${values.length}
-        RETURNING *
-    `;
-
-    const result = await pool.query(query, values);
-
-    if (result.rows.length === 0) {
-        return res.status(404).json({
-            message: 'Employee not found'
-        });
-    }
-
-    res.status(200).json({
-        message: 'Employee partially updated successfully',
-        employee: result.rows[0]
-    });
 };
+
 
 // 6. DELETE Employee
 const deleteEmployee = async (req, res) => {
@@ -311,7 +340,7 @@ const deleteEmployee = async (req, res) => {
 };
 
 
-// Export All Controllers
+// EXPORT ALL CONTROLLERS
 module.exports = {
     addEmployee,
     getEmployees,
