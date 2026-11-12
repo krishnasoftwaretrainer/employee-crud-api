@@ -79,10 +79,20 @@ const addEmployee = async (req, res) => {
 
 // 2. GET All Employees (Query Parameters)
 
+
 const getEmployees = async (req, res) => {
     try {
         // Query Parameters
-        const { id, name, page = 1, limit = 10, sortBy = 'id', order = 'asc' } = req.query;
+        const {
+            id,
+            name,
+            email,
+            salary,
+            page = 1,
+            limit = 10,
+            sortBy = 'id',
+            order = 'asc'
+        } = req.query;
 
         let query = "SELECT * FROM employees WHERE 1=1";
         let values = [];
@@ -108,8 +118,32 @@ const getEmployees = async (req, res) => {
                 });
             }
 
-            query += ` AND name = $${count++}`;
-            values.push(name.trim());
+            query += ` AND name ILIKE $${count++}`;
+            values.push(`%${name.trim()}%`);
+        }
+
+        // Filtering by Email
+        if (email !== undefined) {
+            if (typeof email !== 'string' || email.trim() === '') {
+                return res.status(400).json({
+                    message: 'Invalid employee email'
+                });
+            }
+
+            query += ` AND email = $${count++}`;
+            values.push(email.trim());
+        }
+
+        // Filtering by Salary
+        if (salary !== undefined) {
+            if (salary.trim() === '' || !Number.isFinite(Number(salary))) {
+                return res.status(400).json({
+                    message: 'Invalid employee salary'
+                });
+            }
+
+            query += ` AND salary = $${count++}`;
+            values.push(Number(salary));
         }
 
         // Pagination Validation
@@ -160,7 +194,9 @@ const getEmployees = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({
+            message: error.message
+        });
     }
 };
 
