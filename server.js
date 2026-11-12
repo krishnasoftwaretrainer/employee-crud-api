@@ -1,12 +1,12 @@
 
 const express = require('express');
 const pool = require('./config/db');
-
+const fileRoutes = require('./routes/fileRoutes');
 const app = express();
 
 // Middleware
 app.use(express.json());
-
+app.use('/api/files', fileRoutes);
 // Serve HTML, CSS and JavaScript
 app.use(express.static('public'));
 

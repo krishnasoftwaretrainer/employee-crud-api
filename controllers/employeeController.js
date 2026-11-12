@@ -78,14 +78,17 @@ const addEmployee = async (req, res) => {
 
 
 // 2. GET All Employees (Query Parameters)
+
 const getEmployees = async (req, res) => {
     try {
-        const { id, name } = req.query;
+        // Query Parameters
+        const { id, name, page = 1, limit = 10, sortBy = 'id', order = 'asc' } = req.query;
 
         let query = "SELECT * FROM employees WHERE 1=1";
         let values = [];
         let count = 1;
 
+        // Filtering by ID
         if (id !== undefined) {
             if (!validateId(id)) {
                 return res.status(400).json({
@@ -97,6 +100,7 @@ const getEmployees = async (req, res) => {
             values.push(id);
         }
 
+        // Filtering by Name
         if (name !== undefined) {
             if (typeof name !== 'string' || name.trim() === '') {
                 return res.status(400).json({
@@ -108,12 +112,50 @@ const getEmployees = async (req, res) => {
             values.push(name.trim());
         }
 
-        query += " ORDER BY id";
+        // Pagination Validation
+        const pageNumber = Number(page);
+        const pageLimit = Number(limit);
+
+        if (!Number.isInteger(pageNumber) || pageNumber < 1 ||
+            !Number.isInteger(pageLimit) || pageLimit < 1) {
+            return res.status(400).json({
+                message: 'Invalid page or limit'
+            });
+        }
+
+        // Sorting Validation
+        const allowedColumns = ['id', 'name', 'salary'];
+
+        if (!allowedColumns.includes(sortBy)) {
+            return res.status(400).json({
+                message: 'Invalid sort field'
+            });
+        }
+
+        const sortOrder = order.toLowerCase();
+
+        if (!['asc', 'desc'].includes(sortOrder)) {
+            return res.status(400).json({
+                message: 'Invalid sort order'
+            });
+        }
+
+        // Sorting
+        query += ` ORDER BY ${sortBy} ${sortOrder.toUpperCase()}`;
+
+        // Pagination
+        const offset = (pageNumber - 1) * pageLimit;
+
+        query += ` LIMIT $${count++} OFFSET $${count++}`;
+
+        values.push(pageLimit, offset);
 
         const result = await pool.query(query, values);
 
         res.status(200).json({
             message: 'Employees retrieved successfully',
+            page: pageNumber,
+            limit: pageLimit,
             employees: result.rows
         });
 
@@ -121,6 +163,7 @@ const getEmployees = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
 
 
 // 3. GET Employee By ID (Path + Query Parameters)
